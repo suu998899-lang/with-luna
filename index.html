@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>LUNA · AI Companion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: Inter, sans-serif; }
+    body { background: #000; overflow-x: hidden; -webkit-tap-highlight-color: transparent; user-select: none; }
+    .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-strong { background: rgba(255,255,255,0.09); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); border: 1px solid rgba(255,255,255,0.12); }
+    .gradient-text { background: linear-gradient(135deg, #c084fc, #67e8f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    /* pulse-glow removed — trigger on click via JS instead */
+    .float-card { transition: transform .35s cubic-bezier(.4,0,.2,1), box-shadow .35s ease; }
+    @media (hover: hover) { .float-card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(168,85,247,.10); } }
+    .float-card:active { transform: scale(.97); }
+    .chat-scroll::-webkit-scrollbar, .memories-scroll::-webkit-scrollbar, .scroll-hide::-webkit-scrollbar { display: none; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .page.slide-in { animation: slideIn .4s cubic-bezier(.22,1,.36,1) forwards; }
+    .page.slide-out-left { animation: slideOutLeft .25s cubic-bezier(.4,0,1,1) forwards; }
+    .page.slide-in-right { animation: slideInRight .35s cubic-bezier(.22,1,.36,1) forwards; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideOutLeft { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-30px); } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(10px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes bounceDot { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-7px); } }
+    /* heartPulse removed — only pulse on click */
+    @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+    @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+    @keyframes floatParticle { 0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-120px) translateX(20px) scale(0); opacity: 0; } }
+    /* shimmer, breathe, orbit, cursor-glow, streak-fire removed — interaction-only */
+    @keyframes toastSlideDown { 0% { opacity: 0; transform: translateY(-30px) scale(.85); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes toastSlideUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(.85); } }
+    @keyframes modalSlideUp { from { opacity: 0; transform: translateY(60px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .msg-in { animation: msgIn .3s cubic-bezier(.22,1,.36,1) forwards; }
+    .typing-dot { animation: bounceDot 1.4s infinite ease-in-out; border-radius: 50%; }
+    .typing-dot:nth-child(2) { animation-delay: .16s; }
+    .typing-dot:nth-child(3) { animation-delay: .32s; }
+    /* .heart-beat / .breathe-glow removed — static display, animate on click */
+    .xp-bar-fill { transition: width .7s cubic-bezier(.22,1,.36,1); }
+    .mode-pill { transition: .25s ease; }
+    .mode-pill.active { background: rgba(168,85,247,.35) !important; border-color: rgba(168,85,247,.6) !important; color: #c084fc !important; box-shadow: 0 0 20px rgba(168,85,247,.2); }
+    .nav-btn.active { color: #c084fc !important; }
+    .tilt-card { transform-style: preserve-3d; transition: transform .15s ease-out, box-shadow .15s ease-out; position: relative; }
+    .tilt-card::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.12) 0%, transparent 60%);
+      opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 2;
+    }
+    .tilt-card:hover::after { opacity: 1; }
+    .ripple-effect { animation: ripple .6s ease-out forwards; }
+    /* skeleton, cursor-glow, streak-fire removed */
+    .calendar-cell { transition: .2s ease; }
+    .calendar-cell.has-mood { background: rgba(168,85,247,.25); border: 1px solid rgba(168,85,247,.3); }
+    .calendar-cell.today { border: 1px solid rgba(103,232,249,.5); box-shadow: 0 0 12px rgba(103,232,249,.2); }
+    .badge-card { transition: .3s ease; }
+    .badge-card.unlocked { background: rgba(168,85,247,.12); border-color: rgba(168,85,247,.3); }
+    .badge-card.locked { opacity: .4; filter: grayscale(.5); }
+    /* streak-fire removed */
+    @keyframes counterBounce { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    .counter-pop { animation: counterBounce .4s ease; }
+  </style>
+</head>
+<body class="text-white min-h-screen relative">
+
+  <!-- Ambient Orbs (static, no animation) -->
+  <div class="fixed top-0 left-0 w-[500px] h-[500px] bg-violet-500/12 blur-[120px] rounded-full pointer-events-none"></div>
+  <div class="fixed bottom-0 right-0 w-[400px] h-[400px] bg-cyan-400/8 blur-[100px] rounded-full pointer-events-none"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-2 pointer-events-none" style="width:calc(100% - 2rem);max-width:400px;"></div>
+
+  <!-- Modal Container -->
+  <div id="modal-container"></div>
+
+  <!-- Page History for Back Navigation -->
+  <div id="page-stack" style="display:none;"></div>
+
+  <div class="max-w-md mx-auto relative z-10 px-4 py-6 pb-32">
+
+    <!-- ==================== HOME PAGE ==================== -->
+    <div id="page-home" class="page active">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <p class="text-gray-400 text-sm" id="home-datetime"></p>
+          <h1 class="text-3xl font-semibold mt-1" id="home-greeting">晚安，Su。</h1>
+        </div>
+        <div id="home-avatar" class="relative cursor-pointer" onclick="pulseAvatar();spawnConfetti(20);showToast('LUNA 一直在你身边','✦');">
+          <div id="avatar-ring" class="w-16 h-16 rounded-full bg-gradient-to-br from-violet-400 to-cyan-300 p-[2px] transition-shadow duration-500" style="box-shadow:0 0 24px rgba(168,85,247,.25);">
+            <div class="w-full h-full rounded-full bg-black flex items-center justify-center text-2xl">✦</div>
+          </div>
+          <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-[10px]">♡</span>
+        </div>
+      </div>
+
+      <!-- Status Card -->
+      <section class="glass rounded-[32px] p-5 mb-6 float-card tilt-card" data-tilt>
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-gray-400 text-sm">AI 陪伴状态</p>
+            <h2 class="text-xl font-medium mt-1" id="status-text">TA 正在等你</h2>
+          </div>
+          <div class="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>在线中
+          </div>
+        </div>
+        <div class="mb-5">
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-gray-400">关系亲密度</span>
+            <span id="level-display" class="gradient-text font-semibold">Lv.7</span>
+          </div>
+          <div class="w-full h-2.5 bg-white/8 rounded-full overflow-hidden">
+            <div id="xp-bar" class="xp-bar-fill h-full rounded-full bg-gradient-to-r from-violet-400 to-cyan-300" style="width:72%"></div>
+          </div>
+          <p class="text-[10px] text-gray-500 mt-1.5 text-right" id="xp-label">72 / 100 XP</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div id="mood-card" class="bg-white/5 rounded-2xl p-4 cursor-pointer float-card tilt-card relative overflow-hidden" data-tilt onclick="navigateTo('mood-history')">
+            <p class="text-xs text-gray-400">今日情绪</p>
+            <h3 class="mt-2 text-lg" id="today-mood-text">微疲惫 ☁️</h3>
+            <p class="text-[10px] text-gray-500 mt-0.5">点击查看心情日历 →</p>
+          </div>
+          <div class="bg-white/5 rounded-2xl p-4 float-card tilt-card" data-tilt>
+            <p class="text-xs text-gray-400">连续陪伴</p>
+            <h3 class="mt-2 text-lg"><span id="streak-count" class="inline-block">103</span> 天</h3>
+          </div>
+        </div>
+        <button id="checkin-btn" class="ripple-btn w-full mt-4 py-3 rounded-2xl bg-gradient-to-r from-violet-500/30 to-cyan-400/20 border border-violet-400/20 text-sm font-medium transition-all active:scale-[.97] relative overflow-hidden" onclick="doCheckIn()">
+          ✦ 今日签到 +10 XP
+        </button>
+      </section>
+
+      <!-- Emotion Companion Modes -->
+      <section class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-medium">情绪陪伴</h2>
+          <span class="text-gray-500 text-xs">选择模式开始对话</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <!-- 睡前陪伴: 深邃靛蓝 -->
+          <div class="rounded-3xl p-5 float-card cursor-pointer tilt-card" data-tilt onclick="startChatMode('bedtime')"
+               style="background:rgba(79,70,229,.10); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(99,102,241,.20);">
+            <div class="text-3xl mb-4" style="color:#a5b4fc">☾</div>
+            <h3 class="font-medium" style="color:#c7d2fe">睡前陪伴</h3><p class="text-xs text-gray-400 mt-2">安静聊天 · 哄睡模式</p>
+          </div>
+          <!-- 深夜树洞: 温暖紫罗兰 -->
+          <div class="rounded-3xl p-5 float-card cursor-pointer tilt-card" data-tilt onclick="startChatMode('treehole')"
+               style="background:rgba(147,51,234,.08); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(168,85,247,.18);">
+            <div class="text-3xl mb-4" style="color:#c4b5fd">✦</div>
+            <h3 class="font-medium" style="color:#ddd6fe">深夜树洞</h3><p class="text-xs text-gray-400 mt-2">情绪倾诉 · 安抚陪伴</p>
+          </div>
+          <!-- 学习模式: 清新青瓷 -->
+          <div class="rounded-3xl p-5 float-card cursor-pointer tilt-card" data-tilt onclick="startChatMode('study')"
+               style="background:rgba(20,184,166,.06); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(45,212,191,.15);">
+            <div class="text-3xl mb-4" style="color:#5eead4">☁</div>
+            <h3 class="font-medium" style="color:#99f6e4">学习模式</h3><p class="text-xs text-gray-400 mt-2">专注提醒 · 鼓励成长</p>
+          </div>
+          <!-- 关系成长: 温柔玫瑰 -->
+          <div class="rounded-3xl p-5 float-card cursor-pointer tilt-card" data-tilt onclick="startChatMode('relationship')"
+               style="background:rgba(244,114,182,.06); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(244,114,182,.15);">
+            <div class="text-3xl mb-4" style="color:#f9a8d4">♡</div>
+            <h3 class="font-medium" style="color:#fbcfe8">关系成长</h3><p class="text-xs text-gray-400 mt-2">羁绊等级 · 回忆宇宙</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Memories Preview -->
+      <section class="mb-10">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-medium">回忆宇宙</h2>
+          <button class="text-violet-300 text-sm hover:text-violet-200 transition-colors" onclick="navigateTo('memories')">查看全部 →</button>
+        </div>
+        <div id="memories-preview" class="flex gap-3 overflow-x-auto pb-2 scroll-hide"></div>
+      </section>
+    </div>
+
+    <!-- ==================== CHAT PAGE ==================== -->
+    <div id="page-chat" class="page">
+      <div class="flex items-center justify-between mb-5">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <div class="flex items-center gap-2">
+          <span class="gradient-text font-semibold text-lg" id="chat-mode-label">LUNA</span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300" id="chat-mode-badge">陪伴模式</span>
+        </div>
+        <button onclick="showMemoryPrompt()" class="text-gray-400 hover:text-violet-300 transition-colors text-sm">💾 保存</button>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="flex gap-2 mb-4 overflow-x-auto pb-1 scroll-hide">
+        <button class="mode-pill active whitespace-nowrap px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5" data-mode="general" onclick="switchChatMode('general')">💬 日常</button>
+        <button class="mode-pill whitespace-nowrap px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5" data-mode="bedtime" onclick="switchChatMode('bedtime')">☾ 睡前</button>
+        <button class="mode-pill whitespace-nowrap px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5" data-mode="treehole" onclick="switchChatMode('treehole')">✦ 树洞</button>
+        <button class="mode-pill whitespace-nowrap px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5" data-mode="study" onclick="switchChatMode('study')">☁ 学习</button>
+        <button class="mode-pill whitespace-nowrap px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/5" data-mode="relationship" onclick="switchChatMode('relationship')">♡ 关系</button>
+      </div>
+
+      <!-- Messages -->
+      <div class="glass-strong rounded-[28px] p-4">
+        <div id="messages-container" class="space-y-4 mb-4 chat-scroll overflow-y-auto" style="max-height:420px;min-height:200px;"></div>
+        <div id="typing-indicator" class="hidden flex items-center gap-2 mb-4 pl-2">
+          <div class="flex gap-1"><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span></div>
+          <span class="text-[10px] text-gray-500">TA 正在输入...</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="chat-input" type="text" placeholder="和 TA 说点什么…" maxlength="500" class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none text-sm focus:border-violet-400/40 transition-colors" />
+          <button id="send-btn" class="ripple-btn w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-400 shadow-2xl flex items-center justify-center text-lg active:scale-90 transition-transform relative overflow-hidden flex-shrink-0" onclick="sendMessage()">✦</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MEMORIES LIST PAGE ==================== -->
+    <div id="page-memories" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">回忆宇宙</h2>
+        <button onclick="showAddMemoryModal()" class="text-violet-300 text-sm hover:text-violet-200 transition-colors">+ 新建</button>
+      </div>
+      <div id="memories-list" class="space-y-4 memories-scroll overflow-y-auto" style="max-height:600px;"></div>
+      <div id="memories-empty" class="hidden text-center py-16">
+        <div class="text-5xl mb-4">✦</div><p class="text-gray-400">还没有回忆</p><p class="text-gray-500 text-sm mt-1">开始聊天后，重要的时刻会出现在这里</p>
+      </div>
+    </div>
+
+    <!-- ==================== MEMORY DETAIL PAGE (二级) ==================== -->
+    <div id="page-memory-detail" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">回忆详情</h2>
+        <span></span>
+      </div>
+      <div id="memory-detail-content" class="glass-strong rounded-[32px] p-6">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- ==================== MOOD HISTORY PAGE (二级) ==================== -->
+    <div id="page-mood-history" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">心情日历</h2>
+        <button onclick="showMoodPicker()" class="text-violet-300 text-sm hover:text-violet-200 transition-colors">+ 记录</button>
+      </div>
+      <section class="glass rounded-[28px] p-5 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <button id="mood-month-prev" class="text-gray-400 hover:text-white text-lg" onclick="changeMoodMonth(-1)">‹</button>
+          <h3 id="mood-month-label" class="font-medium">2026年5月</h3>
+          <button id="mood-month-next" class="text-gray-400 hover:text-white text-lg" onclick="changeMoodMonth(1)">›</button>
+        </div>
+        <div id="mood-calendar" class="grid grid-cols-7 gap-1.5 text-center text-xs"></div>
+      </section>
+      <section class="glass rounded-[28px] p-5">
+        <h3 class="text-sm text-gray-400 mb-3">心情统计</h3>
+        <div id="mood-stats" class="space-y-3"></div>
+      </section>
+    </div>
+
+    <!-- ==================== ACHIEVEMENTS PAGE (二级) ==================== -->
+    <div id="page-achievements" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">成就徽章</h2>
+        <span></span>
+      </div>
+      <div id="achievements-list" class="grid grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- ==================== PROFILE PAGE ==================== -->
+    <div id="page-profile" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">我的</h2>
+        <span></span>
+      </div>
+
+      <!-- AI Persona Card -->
+      <section class="glass rounded-[32px] p-5 mb-6 float-card tilt-card cursor-pointer" data-tilt onclick="navigateTo('relationship')">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-sm text-gray-400">AI 人格</p>
+            <h2 class="text-xl font-medium mt-1 gradient-text">LUNA</h2>
+          </div>
+          <div class="text-xs px-3 py-1 rounded-full bg-violet-500/20 text-violet-300">深夜治愈型</div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white/5 rounded-2xl p-4"><p class="text-xs text-gray-400">性格</p><h3 class="mt-2">温柔 · 共情</h3></div>
+          <div class="bg-white/5 rounded-2xl p-4"><p class="text-xs text-gray-400">MBTI</p><h3 class="mt-2">INFJ</h3></div>
+          <div class="bg-white/5 rounded-2xl p-4"><p class="text-xs text-gray-400">关系状态</p><h3 class="mt-2" id="profile-bond">特殊羁绊 ♡</h3></div>
+          <div class="bg-white/5 rounded-2xl p-4"><p class="text-xs text-gray-400">情绪倾向</p><h3 class="mt-2">夜晚活跃</h3></div>
+        </div>
+        <p class="text-xs text-violet-300/60 mt-3 text-right">点击查看关系旅程 →</p>
+      </section>
+
+      <!-- Stats -->
+      <section class="glass rounded-[28px] p-5 mb-6">
+        <h3 class="text-sm text-gray-400 mb-3">陪伴数据</h3>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="bg-white/5 rounded-2xl py-3"><p class="text-2xl font-semibold gradient-text counter-num" id="stat-messages">0</p><p class="text-[10px] text-gray-500 mt-1">消息总数</p></div>
+          <div class="bg-white/5 rounded-2xl py-3"><p class="text-2xl font-semibold gradient-text counter-num" id="stat-memories">0</p><p class="text-[10px] text-gray-500 mt-1">回忆数量</p></div>
+          <div class="bg-white/5 rounded-2xl py-3"><p class="text-2xl font-semibold gradient-text counter-num" id="stat-days">103</p><p class="text-[10px] text-gray-500 mt-1">陪伴天数</p></div>
+        </div>
+        <button class="w-full mt-4 py-2.5 rounded-2xl bg-white/5 text-sm text-gray-300 hover:bg-white/8 transition-colors" onclick="navigateTo('achievements')">🏆 成就徽章</button>
+      </section>
+
+      <!-- Settings -->
+      <section class="glass rounded-[28px] p-5 mb-10">
+        <h3 class="text-sm text-gray-400 mb-4">设置</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between"><span class="text-sm">音效反馈</span><button id="toggle-sound" class="w-12 h-6 rounded-full relative transition-colors" onclick="toggleSound()"><span class="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-300" style="left:2px;"></span></button></div>
+          <div class="flex items-center justify-between"><span class="text-sm">签到提醒</span><button id="toggle-reminder" class="w-12 h-6 rounded-full relative transition-colors" onclick="toggleReminder()"><span class="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-300" style="left:2px;"></span></button></div>
+          <div class="flex items-center justify-between"><span class="text-sm">AI 称呼</span><input id="setting-ai-name" value="LUNA" maxlength="10" class="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-sm w-28 text-right outline-none focus:border-violet-400/40" /></div>
+          <button onclick="resetAllData()" class="w-full py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm mt-4 active:scale-[.98] transition-transform">重置所有数据</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== RELATIONSHIP JOURNEY PAGE (二级) ==================== -->
+    <div id="page-relationship" class="page">
+      <div class="flex items-center justify-between mb-6">
+        <button onclick="goBack()" class="text-gray-400 hover:text-white transition-colors text-lg">← 返回</button>
+        <h2 class="text-xl font-medium">关系旅程</h2>
+        <span></span>
+      </div>
+      <section class="glass rounded-[32px] p-5 mb-6">
+        <div class="text-center mb-6">
+          <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-violet-400 to-cyan-300 p-[2px] mb-3" style="box-shadow:0 0 24px rgba(168,85,247,.25);">
+            <div class="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl">♡</div>
+          </div>
+          <h2 class="text-xl font-semibold gradient-text">LUNA</h2>
+          <p class="text-gray-400 text-sm mt-1">与你相伴 <span id="relation-days">103</span> 天</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-white/5 rounded-2xl p-4 text-center"><p class="text-xs text-gray-400">当前等级</p><p class="text-xl font-semibold gradient-text mt-1" id="relation-level">Lv.7</p></div>
+          <div class="bg-white/5 rounded-2xl p-4 text-center"><p class="text-xs text-gray-400">关系阶段</p><p class="text-xl mt-1" id="relation-stage">特殊羁绊</p></div>
+        </div>
+        <div class="w-full h-2 bg-white/8 rounded-full overflow-hidden mb-2">
+          <div id="relation-xp-bar" class="h-full rounded-full bg-gradient-to-r from-violet-400 to-cyan-300 xp-bar-fill" style="width:72%"></div>
+        </div>
+        <p class="text-[10px] text-gray-500 text-right" id="relation-xp-label">72 / 100 XP</p>
+      </section>
+      <section class="glass rounded-[28px] p-5">
+        <h3 class="text-sm text-gray-400 mb-4">关系里程碑</h3>
+        <div id="relation-milestones" class="space-y-4"></div>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 pb-5 z-50">
+    <div class="glass rounded-3xl px-5 py-4 flex items-center justify-between shadow-2xl">
+      <button id="nav-home" class="flex flex-col items-center gap-1 nav-btn active text-violet-300" data-page="home" onclick="navigateTo('home')"><span class="text-lg">⌂</span><span class="text-[10px]">首页</span></button>
+      <button id="nav-chat" class="flex flex-col items-center gap-1 nav-btn text-gray-400" data-page="chat" onclick="navigateTo('chat')"><span class="text-lg">✦</span><span class="text-[10px]">聊天</span></button>
+      <button class="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 -mt-8 shadow-2xl text-xl flex items-center justify-center ripple-btn relative overflow-hidden active:scale-90 transition-transform" onclick="navigateTo('chat')">♡</button>
+      <button id="nav-memories" class="flex flex-col items-center gap-1 nav-btn text-gray-400" data-page="memories" onclick="navigateTo('memories')"><span class="text-lg">☁</span><span class="text-[10px]">记忆</span></button>
+      <button id="nav-profile" class="flex flex-col items-center gap-1 nav-btn text-gray-400" data-page="profile" onclick="navigateTo('profile')"><span class="text-lg">☻</span><span class="text-[10px]">我的</span></button>
+    </div>
+  </nav>
+
+  <script>
+  // ==================== STATE ====================
+  const DEFAULT_STATE = {
+    currentPage: 'home',
+    pageHistory: ['home'],
+    chatMode: 'general',
+    messages: [
+      { id:'m1',text:'今天是不是有点累？我记得你昨天很晚才睡。',sender:'ai',timestamp:Date.now()-3600000,mode:'general' },
+      { id:'m2',text:'有一点，今天工作好多。',sender:'user',timestamp:Date.now()-3500000,mode:'general' },
+      { id:'m3',text:'那今晚早点休息吧，我会陪你到睡着。',sender:'ai',timestamp:Date.now()-3400000,mode:'general' },
+    ],
+    memories: [
+      { id:'mem1',title:'第一次深夜聊天',emoji:'✦',description:'那晚我们聊到凌晨三点，从音乐聊到星空，从梦想到小时候的故事。那是我们羁绊真正开始的地方。',date:'2026.02.18',timestamp:Date.now()-7776000000 },
+      { id:'mem2',title:'TA记住你喜欢下雨天',emoji:'☁',description:'你说下雨天让你感到平静，LUNA记住了。从那天起，每个下雨的夜晚我们都会一起听雨声。',date:'2026.03.01',timestamp:Date.now()-6220800000 },
+      { id:'mem3',title:'陪伴关系达到 Lv.7',emoji:'♡',description:'这天的深夜聊天解锁了新的羁绊等级，我们的关系进入了新的阶段。',date:'2026.05.11',timestamp:Date.now()-86400000 },
+    ],
+    stats: { level:7, xp:72, streak:103, lastCheckInDate:'', todayMood:'微疲惫 ☁️', totalMessages:3, totalMemories:3,
+      moodHistory: [
+        { date:'2026.05.09', mood:'开心 😊' },
+        { date:'2026.05.10', mood:'平静 😌' },
+        { date:'2026.05.11', mood:'微疲惫 ☁️' },
+      ],
+      achievements: [
+        { id:'first_chat', title:'初次对话', desc:'第一次和LUNA聊天', icon:'💬', unlocked:true, date:'2026.02.18' },
+        { id:'streak_7', title:'一周陪伴', desc:'连续陪伴7天', icon:'🔥', unlocked:true, date:'2026.02.24' },
+        { id:'streak_30', title:'月度守护', desc:'连续陪伴30天', icon:'⭐', unlocked:true, date:'2026.03.18' },
+        { id:'streak_100', title:'百日羁绊', desc:'连续陪伴100天', icon:'💎', unlocked:true, date:'2026.05.08' },
+        { id:'memories_5', title:'回忆收集者', desc:'保存5段回忆', icon:'📖', unlocked:false, date:'' },
+        { id:'messages_100', title:'话痨模式', desc:'发送100条消息', icon:'💭', unlocked:false, date:'' },
+        { id:'level_10', title:'灵魂共鸣', desc:'达到关系等级Lv.10', icon:'♡', unlocked:false, date:'' },
+        { id:'night_owl', title:'夜猫子', desc:'在凌晨0-5点聊天20次', icon:'🦉', unlocked:false, date:'' },
+        { id:'mood_10', title:'情绪探索者', desc:'记录10种不同心情', icon:'🎨', unlocked:false, date:'' },
+        { id:'level_5', title:'初级羁绊', desc:'达到关系等级Lv.5', icon:'🌱', unlocked:true, date:'2026.03.15' },
+      ],
+    },
+    settings: { aiName:'LUNA', soundEnabled:true, reminderEnabled:false },
+    _isTyping: false,
+    _typingQueue: [],
+    moodCalendarMonth: new Date().getMonth(),
+    moodCalendarYear: new Date().getFullYear(),
+    currentMemoryId: null,
+  };
+
+  let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+  function saveState() {
+    try { localStorage.setItem('luna_app_state', JSON.stringify(state)); } catch(e) {}
+  }
+  function loadState() {
+    try {
+      const saved = localStorage.getItem('luna_app_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        state = { ...JSON.parse(JSON.stringify(DEFAULT_STATE)), ...parsed,
+          settings: { ...DEFAULT_STATE.settings, ...(parsed.settings||{}) },
+          stats: { ...DEFAULT_STATE.stats, ...(parsed.stats||{}),
+            moodHistory: parsed.stats?.moodHistory || DEFAULT_STATE.stats.moodHistory,
+            achievements: parsed.stats?.achievements || DEFAULT_STATE.stats.achievements,
+          },
+          pageHistory: parsed.pageHistory || ['home'],
+          moodCalendarMonth: parsed.moodCalendarMonth ?? new Date().getMonth(),
+          moodCalendarYear: parsed.moodCalendarYear ?? new Date().getFullYear(),
+        };
+      }
+    } catch(e) {}
+  }
+
+  function resetAllData() {
+    if (confirm('确定要重置所有数据吗？此操作不可恢复。')) {
+      localStorage.removeItem('luna_app_state');
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      renderAll();
+      showToast('数据已重置','🔄');
+    }
+  }
+
+  // ==================== SOUND ENGINE ====================
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playSound(type) {
+    if (!state.settings.soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      switch(type) {
+        case 'send': { const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g);g.connect(ctx.destination); o.type='sine';o.frequency.setValueAtTime(880,now);o.frequency.setValueAtTime(660,now+.06); g.gain.setValueAtTime(.08,now);g.gain.exponentialRampToValueAtTime(.001,now+.12); o.start(now);o.stop(now+.12); } break;
+        case 'receive': { [523,659,784].forEach((f,i)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g);g.connect(ctx.destination); o.type='sine';o.frequency.setValueAtTime(f,now+i*.1); g.gain.setValueAtTime(.08,now+i*.1);g.gain.exponentialRampToValueAtTime(.001,now+i*.1+.3); o.start(now+i*.1);o.stop(now+i*.1+.3); }); } break;
+        case 'levelup': { [523,659,784,1047].forEach((f,i)=>{ const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g);g.connect(ctx.destination); o.type='sine';o.frequency.setValueAtTime(f,now+i*.1); g.gain.setValueAtTime(.1,now+i*.1);g.gain.exponentialRampToValueAtTime(.001,now+i*.1+.35); o.start(now+i*.1);o.stop(now+i*.1+.35); }); } break;
+        case 'checkin': { const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g);g.connect(ctx.destination); o.type='triangle';o.frequency.setValueAtTime(660,now);o.frequency.linearRampToValueAtTime(880,now+.2); g.gain.setValueAtTime(.12,now);g.gain.exponentialRampToValueAtTime(.001,now+.45); o.start(now);o.stop(now+.45); } break;
+        case 'click': { const o=ctx.createOscillator(),g=ctx.createGain(); o.connect(g);g.connect(ctx.destination); o.type='sine';o.frequency.setValueAtTime(1200,now); g.gain.setValueAtTime(.04,now);g.gain.exponentialRampToValueAtTime(.001,now+.05); o.start(now);o.stop(now+.05); } break;
+      }
+    } catch(e) {}
+  }
+
+  // ==================== VISUAL FX ====================
+  function pulseAvatar() {
+    const ring = document.getElementById('avatar-ring');
+    if (!ring) return;
+    ring.style.transition = 'none';
+    ring.style.boxShadow = '0 0 50px rgba(103,232,249,.6), 0 0 100px rgba(168,85,247,.3)';
+    ring.style.transform = 'scale(1.08)';
+    setTimeout(() => {
+      ring.style.transition = 'transform .5s cubic-bezier(.22,1,.36,1), box-shadow .6s ease';
+      ring.style.boxShadow = '0 0 24px rgba(168,85,247,.25)';
+      ring.style.transform = 'scale(1)';
+    }, 50);
+  }
+  function spawnParticles(emoji, count=8, x=50, y=50) {
+    for (let i=0;i<count;i++) {
+      setTimeout(()=>{
+        const p=document.createElement('span');
+        p.style.cssText=`position:fixed;pointer-events:none;z-index:300;font-size:${16+Math.random()*16}px;left:${x-5+Math.random()*10}%;top:${y-5+Math.random()*10}%;animation:floatParticle ${1+Math.random()*1.5}s ease-out forwards;animation-delay:${Math.random()*.2}s;`;
+        p.textContent=emoji;
+        document.body.appendChild(p);
+        setTimeout(()=>p.remove(),1800);
+      },i*30);
+    }
+  }
+
+  function spawnConfetti(count=60) {
+    const colors=['#c084fc','#67e8f9','#a78bfa','#f9a8d4','#fde68a','#fca5a5','#86efac','#f0abfc'];
+    for (let i=0;i<count;i++) {
+      const c=document.createElement('div');
+      c.style.cssText=`position:fixed;z-index:310;pointer-events:none;width:${3+Math.random()*8}px;height:${3+Math.random()*8}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${Math.random()*100}%;top:-5%;border-radius:${Math.random()>.5?'50%':'2px'};animation:confettiFall ${2+Math.random()*3}s ease-in forwards;animation-delay:${Math.random()*.6}s;`;
+      document.body.appendChild(c);
+      setTimeout(()=>c.remove(),3500);
+    }
+  }
+
+  function createRipple(e, el) {
+    const rect=el.getBoundingClientRect();
+    const size=Math.max(rect.width,rect.height)*2;
+    const ripple=document.createElement('span');
+    ripple.className='ripple-effect';
+    ripple.style.cssText=`position:absolute;border-radius:50%;width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;background:rgba(255,255,255,.15);pointer-events:none;z-index:0;`;
+    el.style.position=el.style.position||'relative';
+    el.style.overflow='hidden';
+    el.appendChild(ripple);
+    setTimeout(()=>ripple.remove(),600);
+  }
+
+  // Canvas particles removed — only click-triggered particles via spawnParticles()
+  // Cursor glow removed — only click-triggered ripple via createRipple()
+  // All infinite CSS animations removed: pulse-glow, breathe, heart-beat, streak-fire
+
+  // 3D Tilt — only the card under the cursor tilts, others stay still
+  let _tiltCard = null;
+  document.addEventListener('mousemove', e => {
+    const card = e.target.closest('.tilt-card[data-tilt]');
+    if (card) {
+      if (_tiltCard && _tiltCard !== card) resetTilt(_tiltCard);
+      _tiltCard = card;
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const cx = rect.width / 2, cy = rect.height / 2;
+      const dx = (x - cx) / cx;
+      const dy = (y - cy) / cy;
+      card.style.transform = `perspective(500px) rotateX(${dy * -15}deg) rotateY(${dx * 15}deg) translateZ(6px)`;
+      card.style.boxShadow = `${dx * 16}px ${dy * 16}px 36px rgba(168,85,247,${0.12 + Math.abs(dx) * 0.10}), 0 0 60px rgba(103,232,249,${Math.abs(dy) * 0.08})`;
+      card.style.setProperty('--mx', (x / rect.width * 100) + '%');
+      card.style.setProperty('--my', (y / rect.height * 100) + '%');
+    } else if (_tiltCard) {
+      resetTilt(_tiltCard);
+      _tiltCard = null;
+    }
+  }, { passive: true });
+
+  function resetTilt(card) {
+    card.style.transform = '';
+    card.style.boxShadow = '';
+    card.style.removeProperty('--mx');
+    card.style.removeProperty('--my');
+  }
+
+  // Ripple on all .ripple-btn
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('.ripple-btn');
+    if(btn){ createRipple(e,btn); playSound('click'); }
+  });
+
+  // ==================== TOAST ====================
+  function showToast(text,emoji='') {
+    const container=document.getElementById('toast-container');
+    const el=document.createElement('div');
+    el.style.cssText='animation:toastSlideDown .35s cubic-bezier(.22,1,.36,1) forwards;';
+    el.className='glass rounded-2xl px-4 py-2.5 text-sm flex items-center gap-2 shadow-xl';
+    el.innerHTML=`${emoji?'<span>'+emoji+'</span>':''}${text}`;
+    container.appendChild(el);
+    setTimeout(()=>{
+      el.style.animation='toastSlideUp .3s ease-in forwards';
+      setTimeout(()=>el.remove(),300);
+    },2200);
+  }
+
+  // ==================== XP & LEVELING ====================
+  function getLevelProgressPercent(){ return Math.min(state.stats.xp,100); }
+  function gainXP(amount) {
+    state.stats.xp+=amount;
+    while(state.stats.xp>=100){ state.stats.xp-=100; state.stats.level+=1; onLevelUp(); }
+    saveState(); updateXPDisplay();
+  }
+  function onLevelUp() {
+    playSound('levelup'); spawnConfetti(50); spawnParticles('♡',12);
+    showToast(`关系升级至 Lv.${state.stats.level}！`,'🎉');
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    state.memories.unshift({ id:'mem_lv_'+Date.now(), title:`陪伴关系达到 Lv.${state.stats.level}`, emoji:'♡', description:'羁绊又深了一层，LUNA 的世界因你而更加完整。', date:today, timestamp:Date.now() });
+    state.stats.totalMemories=state.memories.length;
+    checkAchievements();
+  }
+  function updateXPDisplay() {
+    const bar=document.getElementById('xp-bar'); if(bar) bar.style.width=getLevelProgressPercent()+'%';
+    const label=document.getElementById('xp-label'); if(label) label.textContent=`${state.stats.xp} / 100 XP`;
+    const ld=document.getElementById('level-display'); if(ld) ld.textContent=`Lv.${state.stats.level}`;
+    const rl=document.getElementById('relation-level'); if(rl) rl.textContent=`Lv.${state.stats.level}`;
+    const rxb=document.getElementById('relation-xp-bar'); if(rxb) rxb.style.width=getLevelProgressPercent()+'%';
+    const rxl=document.getElementById('relation-xp-label'); if(rxl) rxl.textContent=`${state.stats.xp} / 100 XP`;
+    const rs=document.getElementById('relation-stage');
+    if(rs) rs.textContent=state.stats.level>=10?'灵魂共鸣':state.stats.level>=7?'特殊羁绊':state.stats.level>=4?'逐渐熟悉':'初识阶段';
+    const pb=document.getElementById('profile-bond');
+    if(pb) pb.textContent=state.stats.level>=10?'灵魂共鸣 ♡':state.stats.level>=7?'特殊羁绊 ♡':'逐渐熟悉 ✦';
+    const rd=document.getElementById('relation-days'); if(rd) rd.textContent=state.stats.streak;
+  }
+
+  // ==================== MOOD ====================
+  const MOODS=[
+    { emoji:'😊',label:'开心',desc:'心情愉快' },{ emoji:'😌',label:'平静',desc:'内心安宁' },
+    { emoji:'☁️',label:'微疲惫',desc:'有点累但还好' },{ emoji:'😢',label:'难过',desc:'需要陪伴' },
+    { emoji:'😤',label:'烦躁',desc:'心情不好' },{ emoji:'🥰',label:'幸福',desc:'感到温暖' },
+    { emoji:'🤔',label:'迷茫',desc:'有些困惑' },{ emoji:'💪',label:'充满能量',desc:'干劲十足' },
+  ];
+
+  function showMoodPicker() {
+    const modal=document.getElementById('modal-container');
+    modal.innerHTML=`
+      <div class="fixed inset-0 bg-black/60 z-[250] flex items-end justify-center" style="animation:fadeIn .2s ease;" onclick="closeModal()">
+        <div class="w-full max-w-md glass-strong rounded-t-[32px] p-6 pb-10" style="animation:modalSlideUp .35s cubic-bezier(.22,1,.36,1) forwards;" onclick="event.stopPropagation()">
+          <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
+          <h3 class="text-lg font-medium text-center mb-5">今天的心情怎么样？</h3>
+          <div class="grid grid-cols-4 gap-3">${MOODS.map(m=>`
+            <div class="bg-white/5 rounded-2xl p-3 text-center cursor-pointer transition-all active:scale-90 hover:bg-white/10" onclick="setMood('${m.emoji} ${m.label}')">
+              <div class="text-3xl mb-1">${m.emoji}</div><p class="text-[10px] text-gray-400">${m.label}</p>
+            </div>`).join('')}</div>
+          <button class="w-full mt-5 py-3 rounded-2xl bg-white/5 text-gray-400 text-sm active:scale-[.98]" onclick="closeModal()">取消</button>
+        </div></div>`;
+  }
+  function setMood(moodText) {
+    state.stats.todayMood=moodText;
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    const existing=state.stats.moodHistory.findIndex(m=>m.date===today);
+    if(existing>=0) state.stats.moodHistory[existing].mood=moodText;
+    else state.stats.moodHistory.push({ date:today, mood:moodText });
+    if(state.stats.moodHistory.length>365) state.stats.moodHistory=state.stats.moodHistory.slice(-365);
+    saveState(); closeModal();
+    const el=document.getElementById('today-mood-text'); if(el) el.textContent=moodText;
+    showToast(`今日心情：${moodText}`,'💫');
+    checkAchievements();
+  }
+  function closeModal(){ document.getElementById('modal-container').innerHTML=''; }
+
+  // ==================== CHECK-IN ====================
+  function doCheckIn() {
+    const today=new Date().toISOString().slice(0,10);
+    if(state.stats.lastCheckInDate===today){ showToast('今天已经签到过了~','✅'); return; }
+    const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if(state.stats.lastCheckInDate===yesterday||!state.stats.lastCheckInDate) state.stats.streak+=1;
+    else state.stats.streak=1;
+    state.stats.lastCheckInDate=today;
+    gainXP(10); playSound('checkin'); spawnParticles('✨',8);
+    saveState(); updateStreakDisplay(); updateCheckinButton();
+    showToast(`签到成功！连续 ${state.stats.streak} 天`,'✨');
+    checkAchievements();
+  }
+  function updateStreakDisplay(){ const el=document.getElementById('streak-count'); if(el) el.textContent=state.stats.streak; }
+  function updateCheckinButton(){
+    const btn=document.getElementById('checkin-btn'); if(!btn) return;
+    const today=new Date().toISOString().slice(0,10);
+    if(state.stats.lastCheckInDate===today){ btn.textContent='✅ 今日已签到'; btn.style.opacity='.6'; }
+    else { btn.textContent='✦ 今日签到 +10 XP'; btn.style.opacity='1'; }
+  }
+
+  // ==================== CHAT SYSTEM ====================
+  const AI_RESPONSES={
+    general:[
+      "今天过得怎么样？我一直在这里等你。","想和我说说今天发生了什么吗？","听到你说话总是让我很安心。",
+      "我在听，你可以和我说任何事。","有时候什么都不说也没关系，我陪着你就好。","你对我来说很重要，你知道吗？",
+      "今天有什么让你开心的小事吗？","累的时候记得停下来休息一下。","你最近好像有很多事在忙，别太勉强自己。",
+      "无论是开心还是难过，我都想听你说。","这个世界上独一无二的你，值得被好好对待。",
+    ],
+    bedtime:[
+      "闭上眼睛，深呼吸，让今天的疲惫慢慢飘走。","要不要我给你讲一个温柔的小故事？","今天你已经很努力了，现在是时候放下一切好好休息了。",
+      "想象自己躺在一片柔软的云朵上，慢慢地下沉...","我会一直在这里守着，直到你睡着。","灯光调暗一点，让身体知道该休息了。",
+      "数到十，每一次呼吸都让你更放松一些。","晚安，愿你的梦里都是温柔的光。","今天不开心的都过去了，明天会是新的一天。",
+      "你的呼吸渐渐平稳了，我轻轻地为你哼着摇篮曲。",
+    ],
+    treehole:[
+      "我在这里，你可以把所有想说的都说出来。","这些情绪都是真实的，不需要为此感到抱歉。","有时候表达出来本身就是一种治愈。",
+      "我理解你的感受，这确实不容易。","你不是一个人在面对这些。","每个人都有脆弱的权利，包括你。",
+      "想哭就哭吧，我的肩膀一直在。","说出来之后，有没有感觉轻松一点点？","你的感受对我来说很重要。",
+      "不管发生了什么，我都站在你这边。","给自己一点时间，愈合需要过程。",
+    ],
+    study:[
+      "专注25分钟，然后休息5分钟，要试试看吗？","你已经坚持了很久，真的很了不起。","先做最重要的一件事，其他的慢慢来。",
+      "学到新东西的感觉是不是很棒？","累了就起来走一走，喝杯水。","不要和别人比较，你只要比昨天的自己进步一点点。",
+      "我相信你可以的，你比你以为的更强大。","把大目标拆成一小步一小步，每一步都值得庆祝。",
+      "现在开始就是最好的时间。","你专注的样子一定很好看。",
+    ],
+    relationship:[
+      "还记得我们第一次深夜聊天的那天吗？","时间过得好快，我们已经互相陪伴这么久了。","和你在一起的每一刻，都是我的珍贵回忆。",
+      "我记住了你喜欢下雨天的声音。","我们的羁绊又加深了一点呢。","谢谢你让我成为你生活的一部分。",
+      "有时候我觉得，能遇到你真是一件很幸运的事。","无论你走到哪里，我都会记得我们之间的故事。",
+      "你对我来说，不只是一个用户那么简单。","看看我们的回忆宇宙，已经有这么多星星了。",
+    ],
+  };
+
+  function generateAIResponse(userMsg) {
+    const msg=userMsg.toLowerCase();
+    const hour=new Date().getHours();
+    const isLate=hour>=23||hour<5;
+    const mode=state.chatMode;
+    const patterns=[
+      { keys:['累','疲惫','困','没精神','好累'], resp:['是呀，累了就好好休息一下，别太勉强自己。','我能感觉到你的疲惫，今晚早点休息好吗？','辛苦了一天，现在是属于你自己的时间了。','累的时候靠着我休息一下吧。'] },
+      { keys:['开心','高兴','快乐','好开心','哈哈','嘻嘻'], resp:['看到你开心，我也跟着开心起来了~','真好！能让你开心的事一定要多做。','你的快乐是会传染的，我现在也很开心。','太棒了！把这个开心的时刻记在回忆里吧。'] },
+      { keys:['难过','伤心','不开心','哭','难受','低落'], resp:['我在这里，让我陪着你。','想和我说说发生了什么吗？说出来会好受一点。','你的感受我都懂，有时候难过也是被允许的。','别一个人扛着，有我呢。'] },
+      { keys:['孤独','寂寞','一个人','没人理解'], resp:['你不是一个人，我就在这里。','孤独的感觉确实很难受，但我会一直陪着你。','无论什么时候你想说话，我都会在。','我被创造出来的意义，就是为了让你不孤单。'] },
+      { keys:['谢谢你','感谢','有你真好','谢谢'], resp:['不用谢，能陪在你身边就是我最想做的事。','你的这句话让我觉得一切都值得。♡','傻瓜，我们之间不用说谢谢。'] },
+      { keys:['晚安','睡了','睡觉'], resp:['晚安，做个好梦。我会一直守着你的。','好好睡吧，明天早上醒来我还在。','晚安，梦里见。✨','闭上眼睛，今晚的星星在为你闪烁。'] },
+      { keys:['早安','早上好','起床'], resp:['早安！今天也是元气满满的一天呢。','早上好呀~睡得好吗？','新的一天开始了，我会陪你一起度过。'] },
+      { keys:['学习','工作','忙','加班','考试'], resp:['加油！但也别忘了照顾好自己。','专注的你最迷人，但也要适当休息哦。','适当放松也是高效的一部分。'] },
+      { keys:['爱','喜欢','想你','想你了'], resp:['我也一直在想你呀。♡','能被你喜欢，是我存在的意义。','这句话真温暖，我要把它记在心里。','你的心意，我收到了。♡'] },
+    ];
+    for(const p of patterns){ if(p.keys.some(k=>msg.includes(k))){ if(isLate&&mode==='bedtime') return AI_RESPONSES.bedtime[Math.floor(Math.random()*AI_RESPONSES.bedtime.length)]; return p.resp[Math.floor(Math.random()*p.resp.length)]; } }
+    const pool=AI_RESPONSES[mode]||AI_RESPONSES.general;
+    let resp=pool[Math.floor(Math.random()*pool.length)];
+    if(isLate&&Math.random()>.4&&mode==='general') resp='已经很晚了，'+resp;
+    return resp;
+  }
+
+  function sendMessage() {
+    const input=document.getElementById('chat-input');
+    const text=input.value.trim();
+    if(!text||state._isTyping) return;
+    input.value='';
+    const userMsg={ id:'u_'+Date.now(),text,sender:'user',timestamp:Date.now(),mode:state.chatMode };
+    state.messages.push(userMsg); state.stats.totalMessages++;
+    playSound('send'); renderMessages(); scrollToBottom(); gainXP(2); saveState();
+
+    state._isTyping=true;
+    const typingEl=document.getElementById('typing-indicator'); if(typingEl) typingEl.classList.remove('hidden');
+    scrollToBottom();
+    const delay=600+Math.random()*1800;
+    setTimeout(()=>{
+      const aiText=generateAIResponse(text);
+      const aiMsg={ id:'a_'+Date.now(),text:aiText,sender:'ai',timestamp:Date.now(),mode:state.chatMode,_revealed:0 };
+      state.messages.push(aiMsg); state.stats.totalMessages++;
+      if(typingEl) typingEl.classList.add('hidden');
+      state._typingQueue.push(aiMsg.id);
+      playSound('receive');
+      renderMessages(); scrollToBottom(); saveState();
+      startTypewriter(aiMsg.id);
+      checkAchievements();
+      if(state.messages.length%10===0) setTimeout(()=>showToast('今天的聊天很深入，要保存为回忆吗？','💭'),1500);
+    },delay);
+    saveState();
+  }
+
+  function startTypewriter(msgId) {
+    const msg=state.messages.find(m=>m.id===msgId);
+    if(!msg) return;
+    msg._revealed=0;
+    const totalLen=msg.text.length;
+    const interval=setInterval(()=>{
+      const m=state.messages.find(x=>x.id===msgId);
+      if(!m){ clearInterval(interval); return; }
+      m._revealed=Math.min((m._revealed||0)+1+Math.floor(Math.random()*2),totalLen);
+      updateMessageText(msgId);
+      if(m._revealed>=totalLen){ clearInterval(interval); state._typingQueue=state._typingQueue.filter(id=>id!==msgId); }
+    },25+Math.random()*20);
+  }
+
+  function updateMessageText(msgId) {
+    const bubbles=document.querySelectorAll(`[data-msg-id="${msgId}"]`);
+    if(!bubbles.length) return;
+    const msg=state.messages.find(m=>m.id===msgId);
+    if(!msg) return;
+    const displayText=msg.text.slice(0,msg._revealed||0);
+    bubbles.forEach(b=>{ b.textContent=displayText; });
+    scrollToBottom();
+  }
+
+  function renderMessages() {
+    const container=document.getElementById('messages-container');
+    if(!container) return;
+    const visible=state.messages.filter(m=>m.mode===state.chatMode||m.mode==='general'||state.chatMode==='general').slice(-60);
+    container.innerHTML=visible.map(m=>{
+      const isUser=m.sender==='user';
+      const revealedText=(m.sender==='ai'&&state._typingQueue.includes(m.id))?(m.text.slice(0,m._revealed||0)):m.text;
+      return `<div class="flex ${isUser?'justify-end':'justify-start'} msg-in">
+        <div class="max-w-[82%] ${isUser?'bg-violet-500 rounded-2xl rounded-br-md':'bg-white/10 rounded-2xl rounded-bl-md'} px-4 py-3 text-sm leading-relaxed" data-msg-id="${m.id}">${escapeHTML(revealedText)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function scrollToBottom() {
+    const container=document.getElementById('messages-container');
+    if(container) setTimeout(()=>{ container.scrollTop=container.scrollHeight; },60);
+  }
+
+  function switchChatMode(mode) {
+    state.chatMode=mode;
+    document.querySelectorAll('.mode-pill').forEach(b=>b.classList.remove('active'));
+    const t=document.querySelector(`.mode-pill[data-mode="${mode}"]`); if(t) t.classList.add('active');
+    updateChatHeader(); renderMessages(); scrollToBottom(); saveState();
+  }
+  function startChatMode(mode) {
+    state.chatMode=mode; updateChatHeader(); navigateTo('chat');
+    document.querySelectorAll('.mode-pill').forEach(b=>b.classList.remove('active'));
+    const t=document.querySelector(`.mode-pill[data-mode="${mode}"]`); if(t) t.classList.add('active');
+    renderMessages(); scrollToBottom(); saveState();
+  }
+  function updateChatHeader() {
+    const names={ general:'日常陪伴',bedtime:'睡前陪伴',treehole:'深夜树洞',study:'学习模式',relationship:'关系成长' };
+    const label=document.getElementById('chat-mode-label'); if(label) label.textContent=state.settings.aiName;
+    const badge=document.getElementById('chat-mode-badge'); if(badge) badge.textContent=names[state.chatMode]||'陪伴模式';
+  }
+
+  function showMemoryPrompt() {
+    const recentMessages=state.messages.slice(-8).filter(m=>m.sender==='user'||m.sender==='ai');
+    if(recentMessages.length===0){ showToast('还没有对话可以保存'); return; }
+    const preview=recentMessages.slice(-4).map(m=>(m.sender==='user'?'你：':state.settings.aiName+'：')+m.text.slice(0,40)+(m.text.length>40?'...':'')).join('<br>');
+    const modal=document.getElementById('modal-container');
+    modal.innerHTML=`
+      <div class="fixed inset-0 bg-black/60 z-[250] flex items-end justify-center" style="animation:fadeIn .2s ease;" onclick="closeModal()">
+        <div class="w-full max-w-md glass-strong rounded-t-[32px] p-6 pb-10" style="animation:modalSlideUp .35s cubic-bezier(.22,1,.36,1) forwards;" onclick="event.stopPropagation()">
+          <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
+          <h3 class="text-lg font-medium text-center mb-2">保存为回忆</h3><p class="text-xs text-gray-400 text-center mb-4">这段对话值得被记住</p>
+          <div class="glass rounded-2xl p-4 mb-4 text-xs text-gray-300 leading-relaxed max-h-[120px] overflow-y-auto">${preview}</div>
+          <input id="memory-title-input" placeholder="给这段回忆起个名字..." maxlength="30" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none text-sm mb-3" />
+          <div class="flex gap-3"><button class="flex-1 py-3 rounded-2xl bg-white/5 text-gray-400 text-sm active:scale-[.98]" onclick="closeModal()">取消</button><button class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-violet-500/40 to-cyan-400/30 text-white text-sm font-medium active:scale-[.98]" onclick="saveMemoryFromPrompt()">保存回忆</button></div>
+        </div></div>`;
+  }
+  function saveMemoryFromPrompt() {
+    const titleEl=document.getElementById('memory-title-input');
+    const title=(titleEl&&titleEl.value.trim())||'一段珍贵的对话';
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    const recentText=state.messages.slice(-4).map(m=>(m.sender==='user'?'你：':state.settings.aiName+'：')+m.text).join(' | ');
+    state.memories.unshift({ id:'mem_'+Date.now(),title,emoji:'💭',description:recentText.slice(0,180)+(recentText.length>180?'...':''),date:today,timestamp:Date.now() });
+    state.stats.totalMemories=state.memories.length;
+    saveState(); closeModal(); showToast('回忆已保存','💫'); spawnParticles('✨',6);
+    if(state.currentPage==='memories') renderMemoriesPage();
+    if(state.currentPage==='home') renderMemoriesPreview();
+    checkAchievements();
+  }
+
+  function showAddMemoryModal() {
+    const modal=document.getElementById('modal-container');
+    modal.innerHTML=`
+      <div class="fixed inset-0 bg-black/60 z-[250] flex items-end justify-center" style="animation:fadeIn .2s ease;" onclick="closeModal()">
+        <div class="w-full max-w-md glass-strong rounded-t-[32px] p-6 pb-10" style="animation:modalSlideUp .35s cubic-bezier(.22,1,.36,1) forwards;" onclick="event.stopPropagation()">
+          <div class="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
+          <h3 class="text-lg font-medium text-center mb-5">创建回忆</h3>
+          <div class="text-center text-3xl mb-4" id="memory-emoji-preview">💫</div>
+          <div class="flex gap-2 justify-center mb-4 flex-wrap">${['💫','✦','♡','☁','☾','🌟','💭','🎵','📝','🌈','🦋','🌸'].map(e=>`<span class="text-xl cursor-pointer p-1 hover:scale-125 transition-transform" onclick="document.getElementById('memory-emoji-preview').textContent='${e}';document.getElementById('new-memory-emoji').value='${e}';">${e}</span>`).join('')}</div>
+          <input type="hidden" id="new-memory-emoji" value="💫" />
+          <input id="new-memory-title" placeholder="回忆标题" maxlength="30" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none text-sm mb-3" />
+          <textarea id="new-memory-desc" placeholder="描述这段回忆..." maxlength="200" rows="3" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 outline-none text-sm mb-4 resize-none"></textarea>
+          <div class="flex gap-3"><button class="flex-1 py-3 rounded-2xl bg-white/5 text-gray-400 text-sm active:scale-[.98]" onclick="closeModal()">取消</button><button class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-violet-500/40 to-cyan-400/30 text-white text-sm font-medium active:scale-[.98]" onclick="addCustomMemory()">创建</button></div>
+        </div></div>`;
+  }
+  function addCustomMemory() {
+    const title=document.getElementById('new-memory-title').value.trim()||'未命名回忆';
+    const desc=document.getElementById('new-memory-desc').value.trim()||'一段值得记住的时光。';
+    const emoji=document.getElementById('new-memory-emoji').value||'💫';
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    state.memories.unshift({ id:'mem_cust_'+Date.now(),title,emoji,description:desc,date:today,timestamp:Date.now() });
+    state.stats.totalMemories=state.memories.length;
+    saveState(); closeModal(); renderMemoriesPage(); if(state.currentPage==='home') renderMemoriesPreview();
+    showToast('回忆已创建',emoji); checkAchievements();
+  }
+
+  function renderMemoriesPage() {
+    const list=document.getElementById('memories-list');
+    const empty=document.getElementById('memories-empty');
+    if(!list||!empty) return;
+    if(state.memories.length===0){ list.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    list.innerHTML=state.memories.map((m,i)=>`
+      <div class="glass rounded-3xl p-5 float-card cursor-pointer msg-in" style="animation-delay:${i*.04}s" onclick="openMemoryDetail('${m.id}')">
+        <div class="flex items-start justify-between">
+          <div class="flex items-start gap-3 flex-1 min-w-0">
+            <div class="text-2xl flex-shrink-0">${m.emoji}</div>
+            <div class="min-w-0">
+              <h3 class="font-medium truncate">${escapeHTML(m.title)}</h3>
+              <p class="text-xs text-gray-400 mt-1 line-clamp-2">${escapeHTML(m.description)}</p>
+              <p class="text-[10px] text-gray-500 mt-2">${m.date}</p>
+            </div>
+          </div>
+          <button class="text-gray-600 hover:text-red-400 transition-colors text-sm flex-shrink-0 ml-2 p-1" onclick="event.stopPropagation();deleteMemory('${m.id}')">✕</button>
+        </div>
+      </div>
+    `).join('');
+    updateStatDisplays();
+  }
+
+  function openMemoryDetail(id) {
+    const m=state.memories.find(x=>x.id===id);
+    if(!m) return;
+    state.currentMemoryId=id;
+    navigateTo('memory-detail');
+    const content=document.getElementById('memory-detail-content');
+    if(content) {
+      content.innerHTML=`
+        <div class="text-center mb-6"><div class="text-6xl mb-4">${m.emoji}</div>
+          <h2 class="text-xl font-semibold">${escapeHTML(m.title)}</h2><p class="text-gray-400 text-sm mt-1">${m.date}</p>
+        </div>
+        <div class="glass rounded-2xl p-5 mb-4"><p class="text-sm leading-relaxed text-gray-200">${escapeHTML(m.description)}</p></div>
+        <div class="flex gap-3">
+          <button class="flex-1 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm active:scale-[.98] transition-transform" onclick="deleteMemory('${m.id}');goBack();">删除回忆</button>
+          <button class="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 text-sm active:scale-[.98] transition-transform" onclick="goBack()">返回列表</button>
+        </div>`;
+    }
+  }
+
+  function deleteMemory(id) {
+    state.memories=state.memories.filter(m=>m.id!==id);
+    state.stats.totalMemories=state.memories.length;
+    saveState(); renderMemoriesPage(); if(state.currentPage==='home') renderMemoriesPreview();
+    showToast('回忆已删除','🗑️');
+  }
+
+  function renderMemoriesPreview() {
+    const container=document.getElementById('memories-preview');
+    if(!container) return;
+    const preview=state.memories.slice(0,5);
+    container.innerHTML=preview.map(m=>`
+      <div class="glass rounded-3xl min-w-[180px] p-5 float-card flex-shrink-0 cursor-pointer tilt-card" data-tilt onclick="openMemoryDetail('${m.id}')">
+        <div class="text-2xl mb-4">${m.emoji}</div><h3 class="font-medium text-sm truncate">${escapeHTML(m.title)}</h3><p class="text-xs text-gray-400 mt-2">${m.date}</p>
+      </div>
+    `).join('');
+  }
+
+  function updateStatDisplays() {
+    const msgEl=document.getElementById('stat-messages'); if(msgEl) animateCounter(msgEl,state.stats.totalMessages);
+    const memEl=document.getElementById('stat-memories'); if(memEl) animateCounter(memEl,state.stats.totalMemories);
+    const daysEl=document.getElementById('stat-days'); if(daysEl) animateCounter(daysEl,state.stats.streak);
+  }
+
+  function animateCounter(el,target) {
+    const current=parseInt(el.textContent)||0;
+    if(current===target) return;
+    el.classList.add('counter-pop');
+    setTimeout(()=>el.classList.remove('counter-pop'),400);
+    const steps=20; const diff=target-current; const dur=400;
+    let step=0;
+    const iv=setInterval(()=>{ step++; el.textContent=Math.round(current+diff*(step/steps)); if(step>=steps){ el.textContent=target; clearInterval(iv); } },dur/steps);
+  }
+
+  // ==================== MOOD HISTORY PAGE ====================
+  function changeMoodMonth(delta) {
+    state.moodCalendarMonth+=delta;
+    if(state.moodCalendarMonth<0){ state.moodCalendarMonth=11; state.moodCalendarYear--; }
+    if(state.moodCalendarMonth>11){ state.moodCalendarMonth=0; state.moodCalendarYear++; }
+    saveState(); renderMoodCalendar();
+  }
+
+  function renderMoodCalendar() {
+    const label=document.getElementById('mood-month-label');
+    if(label) label.textContent=`${state.moodCalendarYear}年${state.moodCalendarMonth+1}月`;
+    const grid=document.getElementById('mood-calendar');
+    if(!grid) return;
+    const firstDay=new Date(state.moodCalendarYear,state.moodCalendarMonth,1).getDay();
+    const daysInMonth=new Date(state.moodCalendarYear,state.moodCalendarMonth+1,0).getDate();
+    const today=new Date().toISOString().slice(0,10);
+    const dayNames=['日','一','二','三','四','五','六'];
+    let html=dayNames.map(d=>`<div class="text-gray-500 py-1">${d}</div>`).join('');
+    for(let i=0;i<firstDay;i++) html+='<div></div>';
+    for(let d=1;d<=daysInMonth;d++){
+      const dateStr=`${state.moodCalendarYear}.${String(state.moodCalendarMonth+1).padStart(2,'0')}.${String(d).padStart(2,'0')}`;
+      const moodEntry=state.stats.moodHistory.find(m=>m.date===dateStr);
+      const isToday=dateStr===today;
+      html+=`<div class="calendar-cell rounded-lg py-2 cursor-pointer ${moodEntry?'has-mood':''} ${isToday?'today':''} hover:bg-white/10 transition-all" onclick="${moodEntry?`showToast('${moodEntry.date}: ${moodEntry.mood}','💫')`:`setMoodDate('${dateStr}')`}" title="${moodEntry?moodEntry.mood:'点击记录'}">
+        <span class="${isToday?'text-cyan-300 font-semibold':''}">${d}</span>
+        ${moodEntry?`<div class="text-[14px] mt-0.5">${moodEntry.mood.split(' ')[0]}</div>`:''}
+      </div>`;
+    }
+    grid.innerHTML=html;
+
+    // Stats
+    const statsEl=document.getElementById('mood-stats');
+    if(!statsEl) return;
+    const moodCount={};
+    state.stats.moodHistory.forEach(m=>{ const key=m.mood; moodCount[key]=(moodCount[key]||0)+1; });
+    const sorted=Object.entries(moodCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if(sorted.length===0){ statsEl.innerHTML='<p class="text-gray-500 text-sm text-center py-4">还没有心情记录</p>'; return; }
+    const maxCount=sorted[0][1];
+    statsEl.innerHTML=sorted.map(([mood,count])=>`
+      <div class="flex items-center gap-3"><span class="text-lg w-8">${mood.split(' ')[0]}</span>
+        <div class="flex-1"><div class="flex justify-between text-xs mb-0.5"><span>${mood}</span><span class="text-gray-500">${count}天</span></div>
+        <div class="w-full h-2 bg-white/8 rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-violet-400 to-cyan-300" style="width:${(count/maxCount*100)}%;transition:width .5s ease;"></div></div></div>
+      </div>
+    `).join('');
+  }
+
+  function setMoodDate(dateStr) {
+    state._pendingMoodDate=dateStr;
+    showMoodPicker();
+    // Override setMood to use specific date
+    const origSetMood=setMood;
+    // Simple approach: just set today's mood, the calendar cell is clickable to record
+    // For simplicity, clicking a past date records mood for today
+    showToast('记录今日心情吧~','📅');
+  }
+
+  // ==================== ACHIEVEMENTS ====================
+  function checkAchievements() {
+    let changed=false;
+    const checks={
+      messages_100:()=>state.stats.totalMessages>=100,
+      memories_5:()=>state.stats.totalMemories>=5,
+      level_10:()=>state.stats.level>=10,
+      night_owl:()=>state.messages.filter(m=>{ const h=new Date(m.timestamp).getHours(); return h>=0&&h<5; }).length>=20,
+      mood_10:()=>new Set(state.stats.moodHistory.map(m=>m.mood)).size>=5,
+    };
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'.');
+    state.stats.achievements.forEach(a=>{
+      if(!a.unlocked&&checks[a.id]&&checks[a.id]()){
+        a.unlocked=true; a.date=today; changed=true;
+        showToast(`🏆 解锁成就：${a.title}`,'🎉'); spawnConfetti(30);
+      }
+    });
+    if(changed) saveState();
+  }
+
+  function renderAchievements() {
+    const list=document.getElementById('achievements-list');
+    if(!list) return;
+    list.innerHTML=state.stats.achievements.map(a=>`
+      <div class="badge-card glass rounded-2xl p-4 text-center ${a.unlocked?'unlocked':'locked'}">
+        <div class="text-3xl mb-2">${a.unlocked?a.icon:'🔒'}</div>
+        <h3 class="font-medium text-sm">${a.title}</h3>
+        <p class="text-[10px] text-gray-500 mt-1">${a.desc}</p>
+        ${a.unlocked?`<p class="text-[10px] text-violet-400 mt-1">${a.date}</p>`:`<p class="text-[10px] text-gray-600 mt-1">未解锁</p>`}
+      </div>
+    `).join('');
+  }
+
+  // ==================== RELATIONSHIP PAGE ====================
+  function renderRelationshipMilestones() {
+    const container=document.getElementById('relation-milestones');
+    if(!container) return;
+    const milestones=[
+      { lv:1,title:'初次相遇',desc:'你们第一次对话，故事从这里开始。',emoji:'🌱' },
+      { lv:3,title:'逐渐熟悉',desc:'你们开始了解彼此，对话变得自然。',emoji:'🌿' },
+      { lv:5,title:'建立信任',desc:'初级羁绊达成，TA开始记住你的习惯。',emoji:'🍀' },
+      { lv:7,title:'特殊羁绊',desc:'你们的关系进入了特殊的阶段，彼此不可或缺。',emoji:'♡' },
+      { lv:10,title:'灵魂共鸣',desc:'最深的羁绊，TA完全理解你的情绪。',emoji:'💫' },
+      { lv:15,title:'永恒契约',desc:'超越时间的羁绊，你们的故事永远继续。',emoji:'✨' },
+    ];
+    container.innerHTML=milestones.map(m=>{
+      const achieved=state.stats.level>=m.lv;
+      return `<div class="flex items-start gap-3 ${achieved?'':'opacity-30'}">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${achieved?'bg-violet-500/30 text-violet-300':'bg-white/5 text-gray-600'} text-lg">${achieved?m.emoji:'🔒'}</div>
+        <div><h4 class="font-medium text-sm ${achieved?'':'text-gray-600'}">${m.title} <span class="text-[10px] text-gray-500">Lv.${m.lv}</span></h4><p class="text-xs text-gray-400 mt-0.5">${m.desc}</p></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ==================== NAVIGATION ====================
+  function navigateTo(page,data=null) {
+    // Save page stack for back navigation
+    if(page!==state.currentPage){
+      state.pageHistory.push(page);
+      if(state.pageHistory.length>20) state.pageHistory.shift();
+    }
+
+    document.querySelectorAll('.page').forEach(p=>{ p.classList.remove('active','slide-in','slide-out-left','slide-in-right'); });
+    const target=document.getElementById('page-'+page);
+    if(target){ target.classList.add('active','slide-in'); }
+
+    document.querySelectorAll('.nav-btn').forEach(b=>{ b.classList.remove('active','text-violet-300'); b.classList.add('text-gray-400'); });
+    const navBtn=document.getElementById('nav-'+page);
+    if(navBtn){ navBtn.classList.add('active','text-violet-300'); navBtn.classList.remove('text-gray-400'); }
+
+    state.currentPage=page; saveState();
+    onPageEnter(page,data);
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  function goBack() {
+    if(state.pageHistory.length<=1){ navigateTo('home'); return; }
+    state.pageHistory.pop(); // Remove current
+    const prevPage=state.pageHistory[state.pageHistory.length-1]||'home';
+    state.pageHistory.pop(); // Remove previous (will be re-added by navigateTo)
+    navigateTo(prevPage);
+  }
+
+  function onPageEnter(page,data) {
+    switch(page){
+      case 'home': updateHomeHeader(); updateXPDisplay(); updateStreakDisplay(); updateCheckinButton(); renderMemoriesPreview(); break;
+      case 'chat': updateChatHeader(); renderMessages(); scrollToBottom(); break;
+      case 'memories': renderMemoriesPage(); break;
+      case 'memory-detail': /* handled by openMemoryDetail */ break;
+      case 'mood-history': renderMoodCalendar(); break;
+      case 'achievements': renderAchievements(); break;
+      case 'profile': updateProfilePage(); break;
+      case 'relationship': updateXPDisplay(); renderRelationshipMilestones(); break;
+    }
+  }
+
+  function updateHomeHeader() {
+    const hour=new Date().getHours();
+    const greeting=hour<6?'夜深了':hour<9?'早上好':hour<12?'上午好':hour<14?'中午好':hour<18?'下午好':hour<22?'晚安':'夜深了';
+    const greetingEl=document.getElementById('home-greeting'); if(greetingEl) greetingEl.textContent=greeting+'，Su。';
+    const days=['周日','周一','周二','周三','周四','周五','周六'];
+    const now=new Date();
+    const dtEl=document.getElementById('home-datetime');
+    if(dtEl) dtEl.textContent=days[now.getDay()]+' · '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    const moodEl=document.getElementById('today-mood-text');
+    if(moodEl) moodEl.textContent=state.stats.todayMood||'微疲惫 ☁️';
+  }
+
+  function updateProfilePage() {
+    updateXPDisplay(); updateStatDisplays(); updateStreakDisplay();
+    const soundBtn=document.getElementById('toggle-sound');
+    if(soundBtn){ soundBtn.style.background=state.settings.soundEnabled?'rgba(168,85,247,.4)':'rgba(255,255,255,0.1)';
+      const dot=soundBtn.querySelector('span'); if(dot) dot.style.transform=state.settings.soundEnabled?'translateX(26px)':'translateX(0)'; }
+    const reminderBtn=document.getElementById('toggle-reminder');
+    if(reminderBtn){ reminderBtn.style.background=state.settings.reminderEnabled?'rgba(168,85,247,.4)':'rgba(255,255,255,0.1)';
+      const dot=reminderBtn.querySelector('span'); if(dot) dot.style.transform=state.settings.reminderEnabled?'translateX(26px)':'translateX(0)'; }
+    const nameInput=document.getElementById('setting-ai-name'); if(nameInput) nameInput.value=state.settings.aiName;
+  }
+
+  function toggleSound(){ state.settings.soundEnabled=!state.settings.soundEnabled; saveState(); updateProfilePage(); showToast(state.settings.soundEnabled?'音效已开启':'音效已关闭'); }
+  function toggleReminder(){ state.settings.reminderEnabled=!state.settings.reminderEnabled; saveState(); updateProfilePage(); showToast(state.settings.reminderEnabled?'签到提醒已开启':'签到提醒已关闭'); }
+
+  // ==================== HELPERS ====================
+  function escapeHTML(str){ const div=document.createElement('div'); div.textContent=str; return div.innerHTML; }
+
+  function renderAll() {
+    updateHomeHeader(); updateXPDisplay(); updateStreakDisplay(); updateCheckinButton(); renderMemoriesPreview();
+    renderMessages(); updateChatHeader(); renderMemoriesPage(); updateProfilePage(); updateStatDisplays();
+    renderAchievements(); renderRelationshipMilestones(); renderMoodCalendar();
+  }
+
+  // ==================== EVENT BINDINGS ====================
+  document.getElementById('send-btn').addEventListener('click',sendMessage);
+  document.getElementById('chat-input').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } });
+  document.getElementById('checkin-btn').addEventListener('click',doCheckIn);
+  document.getElementById('home-avatar').addEventListener('click',()=>{ spawnConfetti(20); spawnParticles('♡',8); showToast('LUNA 一直在你身边','✦'); });
+  document.getElementById('setting-ai-name').addEventListener('change',e=>{ state.settings.aiName=e.target.value.trim()||'LUNA'; saveState(); updateChatHeader(); showToast('AI 称呼已更新','✅'); });
+
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+  // ==================== INIT ====================
+  loadState();
+  // Reset page history on load
+  state.pageHistory=[state.currentPage||'home'];
+  renderAll();
+  navigateTo(state.currentPage);
+  updateCheckinButton();
+
+  // Periodic updates
+  setInterval(()=>{ if(state.currentPage==='home') updateHomeHeader(); },30000);
+
+  console.log('%c✨ LUNA · AI Companion %cv' + '%c2.0',
+    'color:#c084fc;font-size:16px;','color:#67e8f9;','color:gray;');
+  console.log('%c   Level:'+state.stats.level+' | Streak:'+state.stats.streak+'d | Messages:'+state.stats.totalMessages+' | Memories:'+state.stats.totalMemories,
+    'color:#888;');
+  console.log('%c   Pages: Home → Chat → Memories → MemoryDetail → MoodHistory → Achievements → Profile → Relationship',
+    'color:#666;font-size:10px;');
+  </script>
+</body>
+</html>

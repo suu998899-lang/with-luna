@@ -80,7 +80,7 @@
   <!-- Page History for Back Navigation -->
   <div id="page-stack" style="display:none;"></div>
 
-  <div class="max-w-md mx-auto relative z-10 px-4 py-6 pb-32">
+  <div class="max-w-md mx-auto relative z-10 px-4 py-6 pb-24">
 
     <!-- ==================== HOME PAGE ==================== -->
     <div id="page-home" class="page active">
@@ -200,7 +200,7 @@
 
       <!-- Messages -->
       <div class="glass-strong rounded-[28px] p-4">
-        <div id="messages-container" class="space-y-4 mb-4 chat-scroll overflow-y-auto" style="max-height:420px;min-height:200px;"></div>
+        <div id="messages-container" class="space-y-4 mb-4 chat-scroll overflow-y-auto" style="max-height:calc(100vh - 340px);min-height:320px;"></div>
         <div id="typing-indicator" class="hidden flex items-center gap-2 mb-4 pl-2">
           <div class="flex gap-1"><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span><span class="w-1.5 h-1.5 bg-violet-400 typing-dot"></span></div>
           <span class="text-[10px] text-gray-500">TA 正在输入...</span>
@@ -350,7 +350,7 @@
   </div>
 
   <!-- Bottom Navigation -->
-  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 pb-5 z-50">
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 pb-3 z-50">
     <div class="glass rounded-3xl px-5 py-4 flex items-center justify-between shadow-2xl">
       <button id="nav-home" class="flex flex-col items-center gap-1 nav-btn active text-violet-300" data-page="home" onclick="navigateTo('home')"><span class="text-lg">⌂</span><span class="text-[10px]">首页</span></button>
       <button id="nav-chat" class="flex flex-col items-center gap-1 nav-btn text-gray-400" data-page="chat" onclick="navigateTo('chat')"><span class="text-lg">✦</span><span class="text-[10px]">聊天</span></button>
@@ -406,7 +406,10 @@
   let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 
   function saveState() {
-    try { localStorage.setItem('luna_app_state', JSON.stringify(state)); } catch(e) {}
+    try {
+      const { _isTyping, _typingQueue, _pendingMoodDate, _tiltCard, ...persistable } = state;
+      localStorage.setItem('luna_app_state', JSON.stringify(persistable));
+    } catch(e) {}
   }
   function loadState() {
     try {
@@ -719,6 +722,7 @@
       const aiText=generateAIResponse(text);
       const aiMsg={ id:'a_'+Date.now(),text:aiText,sender:'ai',timestamp:Date.now(),mode:state.chatMode,_revealed:0 };
       state.messages.push(aiMsg); state.stats.totalMessages++;
+      state._isTyping=false;
       if(typingEl) typingEl.classList.add('hidden');
       state._typingQueue.push(aiMsg.id);
       playSound('receive');
@@ -1119,6 +1123,9 @@
 
   // ==================== INIT ====================
   loadState();
+  // Always reset runtime flags (prevent stale _isTyping from blocking chat)
+  state._isTyping = false;
+  state._typingQueue = [];
   // Reset page history on load
   state.pageHistory=[state.currentPage||'home'];
   renderAll();
